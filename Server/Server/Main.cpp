@@ -1,16 +1,25 @@
-#include <string.h>
+#include <string>
 #include "IParallelServer.h"
 #include "ParallelServer.h"
 
-int main()
+int main(int args, char** argv)
 {
+	std::string strListenNum = "5000";
+
+	if (args > 1)
+	{
+		strListenNum = argv[1];
+	}
+
 	IParallelServer* pServer = new ParallelServer();
 	if (pServer==nullptr)
 	{
 		return -1;
 	}
 
-	if (!pServer->Configure(8888,1000))
+	int iListenNum = std::stoi(strListenNum);
+
+	if (!pServer->Configure(8888, iListenNum))
 	{
 		std::cout << pServer->GetErrorMsg() << std::endl;
 
