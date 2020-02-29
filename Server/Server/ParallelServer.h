@@ -57,10 +57,16 @@ public:
 
 private:
 	// Send the data to server
-	bool Send(int iClientSocket,const char* pData, int iSendSize);
+	bool Send(int iClientSocket,
+		const char* pData, 
+		int iSendSize,
+		int& iRealSendSize);
 
 	// Receive data from the server
-	bool Receive(int iClientSocket, char* pData, int iRevSize);
+	bool Receive(int iClientSocket, 
+		char* pData,
+		int iRevSize,
+		int& iRealRecvSize);
 
 	// Prepare the environment
 	bool PrepareEnvironment();

@@ -242,73 +242,32 @@ bool ParallelServer::Start()
 
 				char RevData[500] = {0};
 
-				ssize_t nReadBytes = read(iCurFd, RevData, 500);
-				if (nReadBytes<0)
+				int iRevSize = 0;
+
+				if (!Receive(iCurFd, RevData,500, iRevSize))
 				{
 					close(iCurFd);
-
-					if (errno == ECONNRESET)
-					{
-						m_EpollEvent.data.fd = -1;
-
-						m_EpollEvent.events = EPOLLIN | EPOLLET;
-
-						// Register epoll event
-						int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_MOD, GetListenSocket(), &m_EpollEvent);
-						if (iEpollRegRet == -1)
-						{
-							char* pErrorMsg = strerror(errno);
-
-							SetErrorText(pErrorMsg);
-
-							return false;
-						}
-					}
-					else
-					{
-						std::cout <<"Read error!"<< std::endl;
-					}
 
 					continue;
 				}
 
-				if (nReadBytes<500)
+				// This is an event changed status so read nothing
+				if (iRevSize==0)
 				{
-					std::string strGetText = "Data from the client:";
-
-					strGetText = strGetText + std::to_string(iCurFd) + " Text: ";
-
-					std::cout << strGetText << RevData << std::endl;
-				}
-				else
-				{
-					while (nReadBytes != 0)
-					{
-						std::string strGetText = "Data from the client:";
-
-						strGetText = strGetText + std::to_string(iCurFd) + " Text: ";
-
-						std::cout << strGetText << RevData << std::endl;
-
-						nReadBytes = read(iCurFd, RevData, 500);
-						if (nReadBytes < 0)
-						{
-							char* pErrorMsg = strerror(errno);
-
-							SetErrorText(pErrorMsg);
-
-							break;
-						}
-					}
+					continue;
 				}
 
-				std::cout << "Read finish all !" << std::endl;
+				std::cout << "Read from client: " 
+					<<std::to_string(iCurFd)
+					<<"--"
+					<< RevData 
+					<< std::endl;
 
 				m_EpollEvent.data.fd = iCurFd;
 
 				m_EpollEvent.events = EPOLLOUT | EPOLLET;
 
-				// Register epoll event
+				// Change epoll event to listen output event
 				int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_MOD, iCurFd, &m_EpollEvent);
 				if (iEpollRegRet == -1)
 				{
@@ -339,28 +298,25 @@ bool ParallelServer::Start()
 
 				int iBlockLen = 1024;
 
-				int iSendBytes = Send(iCurFd, pData, iBlockLen);
-
-				while (iSendBytes!=0)
+				if (iLeftLen < iBlockLen)
 				{
-					iLeftLen -= iSendBytes;
-					if (iLeftLen>iBlockLen)
-					{
-						iBlockLen = 1024;
-					}
-					else
-					{
-						iBlockLen = iLeftLen;
-					}
-
-					iSendBytes = Send(iCurFd, pData, iBlockLen);
+					iBlockLen = iLeftLen;
 				}
 
+				int iSize = 0;
+
+				if (!Send(iCurFd, pData, iBlockLen, iSize))
+				{
+					close(iCurFd);
+
+					continue;
+				}
+	
 				m_EpollEvent.data.fd = iCurFd;
 
 				m_EpollEvent.events = EPOLLIN | EPOLLET;
 
-				// Register epoll event
+				// Change epoll event to listen input event
 				int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_MOD, iCurFd, &m_EpollEvent);
 				if (iEpollRegRet == -1)
 				{
@@ -388,7 +344,10 @@ bool ParallelServer::Stop()
 }
 
 // Send the data to server
-bool ParallelServer::Send(int iClientSocket, const char* pData, int iSendSize)
+bool ParallelServer::Send(int iClientSocket, 
+	const char* pData,
+	int iSendSize,
+	int& iRealSendSize)
 {
 	if (pData == nullptr)
 	{
@@ -411,22 +370,54 @@ bool ParallelServer::Send(int iClientSocket, const char* pData, int iSendSize)
 		return false;
 	}
 
-	ssize_t lWrittenSize = write(iClientSocket, pData, static_cast<size_t>(iSendSize));
-	if (lWrittenSize == -1)
+	size_t lTotalSize = static_cast<size_t>(iSendSize);
+
+	size_t lLeftSize = lTotalSize;
+
+	size_t lWorkSize = lLeftSize;
+
+	while (lLeftSize>0)
 	{
-		char* pErrorMsg = strerror(errno);
+		ssize_t lWrittenSize = write(iClientSocket, pData, lWorkSize);
+		if (lWrittenSize == -1)
+		{
+			if (errno==EAGAIN)
+			{
+				lWorkSize = 0;
 
-		SetErrorText(pErrorMsg);
+				continue;
+			}
+			else
+			{
+				char* pErrorMsg = strerror(errno);
 
-		return false;
+				SetErrorText(pErrorMsg);
+
+				return false;
+			}
+		}
+		else if (lWrittenSize==0)
+		{
+			break;
+		}
+
+		pData += lWrittenSize;
+
+		lLeftSize -= lWrittenSize;
+
+		lWorkSize = lLeftSize;
 	}
 
-	return true;
+	iRealSendSize = static_cast<int>(lTotalSize - lLeftSize);
 
+	return true;
 }
 
 // Receive data from the server
-bool ParallelServer::Receive(int iClientSocket, char* pData, int iRevSize)
+bool ParallelServer::Receive(int iClientSocket, 
+	char* pData,
+	int iRevSize,
+	int& iRealRecvSize)
 {
 	if (pData == nullptr)
 	{
@@ -449,15 +440,45 @@ bool ParallelServer::Receive(int iClientSocket, char* pData, int iRevSize)
 		return false;
 	}
 
-	ssize_t lReadSize = read(iClientSocket, pData, static_cast<size_t>(iRevSize));
-	if (lReadSize == -1)
+	size_t lTotalSize = static_cast<size_t>(iRevSize);
+
+	size_t lLeftSize = lTotalSize;
+
+	size_t lWorkSize = lLeftSize;
+
+	while (lLeftSize>0)
 	{
-		char* pErrorMsg = strerror(errno);
+		ssize_t lReadSize = read(iClientSocket, pData, lWorkSize);
+		if (lReadSize < 0)
+		{			
+			if (errno==EAGAIN)
+			{
+				lWorkSize = 0;
 
-		SetErrorText(pErrorMsg);
+				continue;
+			}
+			else
+			{
+				char* pErrorMsg = strerror(errno);
 
-		return false;
+				SetErrorText(pErrorMsg);
+
+				return false;
+			}
+		}
+		else if (lReadSize==0)
+		{
+			break;
+		}
+
+		lLeftSize -= lReadSize;
+
+		lWorkSize = lLeftSize;
+
+		pData += lReadSize;
 	}
+
+	iRealRecvSize = static_cast<int>(lTotalSize - lLeftSize);
 
 	return true;
 }
