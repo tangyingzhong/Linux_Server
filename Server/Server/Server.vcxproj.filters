@@ -1,48 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="App">
-      <UniqueIdentifier>{ebd03859-aad7-44bc-adfe-c0ec1c27d5f2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Interface">
-      <UniqueIdentifier>{7a4c2874-a2fa-45ac-aaee-198a38b8a577}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Network">
-      <UniqueIdentifier>{69454ed5-1b74-441f-8aa7-e769e8113a66}</UniqueIdentifier>
-    </Filter>
+    <ClInclude Include="IParallelServer.h" />
+    <ClInclude Include="ParallelServer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App\Main.cpp">
-      <Filter>App</Filter>
-    </ClCompile>
-    <ClCompile Include="Network\Client.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
-    <ClCompile Include="Network\Server.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
-    <ClCompile Include="Network\ParallelServer.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Interface\IClient.h">
-      <Filter>Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="Interface\IServer.h">
-      <Filter>Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="Network\Client.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="Network\Server.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="Interface\IParallelServer.h">
-      <Filter>Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="Network\ParallelServer.h">
-      <Filter>Network</Filter>
-    </ClInclude>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ParallelServer.cpp" />
   </ItemGroup>
 </Project>

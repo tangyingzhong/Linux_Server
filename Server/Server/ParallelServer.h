@@ -13,7 +13,7 @@
 
 #include <sys/epoll.h>
 #include <vector>
-#include "Interface/IParallelServer.h"
+#include "IParallelServer.h"
 
 class ParallelServer:public IParallelServer
 {

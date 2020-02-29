@@ -34,6 +34,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="IParallelServer.h" />
+    <ClInclude Include="ParallelServer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ParallelServer.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{738eac17-ff47-4c87-9c5f-b99611ff53d1}</ProjectGuid>
     <Keyword>Linux</Keyword>
@@ -76,21 +84,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ProjectPublicIncludePath>$(ProjectDir)</ProjectPublicIncludePath>
+    <IntDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
-  <ItemGroup>
-    <ClCompile Include="App\Main.cpp" />
-    <ClCompile Include="Network\Client.cpp" />
-    <ClCompile Include="Network\ParallelServer.cpp" />
-    <ClCompile Include="Network\Server.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Interface\IClient.h" />
-    <ClInclude Include="Interface\IParallelServer.h" />
-    <ClInclude Include="Interface\IServer.h" />
-    <ClInclude Include="Network\Client.h" />
-    <ClInclude Include="Network\ParallelServer.h" />
-    <ClInclude Include="Network\Server.h" />
-  </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
