@@ -4,7 +4,7 @@
 
 int main(int args, char** argv)
 {
-	std::string strListenNum = "5000";
+	std::string strListenNum = "10000";
 
 	if (args > 1)
 	{
