@@ -13,6 +13,8 @@
 
 #include <sys/epoll.h>
 #include <vector>
+#include <list>
+#include <set>
 #include "IParallelServer.h"
 
 class ParallelServer:public IParallelServer
@@ -56,6 +58,12 @@ public:
 	virtual std::string GetErrorMsg();
 
 private:
+	// Destory the server
+	void Destory();
+
+	// Cleanup
+	void Cleanup();
+
 	// Send the data to server
 	bool Send(int iClientSocket,
 		const char* pData, 
@@ -145,12 +153,6 @@ private:
 	// Epoll event array
 	std::vector<epoll_event> m_EventTable;
 
-	// Client socket
-	int m_iClientSock;
-
-	// Thread id
-	pthread_t m_ThreadId;
-
 	// Listen socket
 	int m_iListenSocket;
 
@@ -159,6 +161,9 @@ private:
 
 	// Listen number
 	int m_iListenNum;
+
+	// Client table
+	std::set<int> m_ClientSet;
 
 	// Error message 
 	std::string m_strErrorText;

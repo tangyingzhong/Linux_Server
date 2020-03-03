@@ -33,6 +33,8 @@ int main(int args, char** argv)
 		return -1;
 	}
 
+	pServer->Stop();
+
 	delete pServer;
 
 	pServer = nullptr;

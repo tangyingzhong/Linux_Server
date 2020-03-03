@@ -26,9 +26,13 @@ m_bDisposed(false)
 // Detructe the ParallelServer
 ParallelServer::~ParallelServer()
 {
-	m_EventTable.clear();
+	Destory();
+}
 
-	std::vector<epoll_event>().swap(m_EventTable);
+// Destory the server
+void ParallelServer::Destory()
+{
+	Stop();
 }
 
 // Configure the server
@@ -197,6 +201,8 @@ bool ParallelServer::Start()
 			{
 				close(iCurFd);
 
+				m_ClientSet.erase(iCurFd);
+
 				std::cout << "Read from client: "
 					<< std::to_string(iCurFd)
 					<< "--"
@@ -219,6 +225,8 @@ bool ParallelServer::Start()
 				{
 					// Set the client to be non-block
 					SetNonBlockStatus(clientSock);
+
+					m_ClientSet.insert(clientSock);
 
 					m_EpollEvent.data.fd = clientSock;
 
@@ -243,6 +251,10 @@ bool ParallelServer::Start()
 				int iCurFd = m_EventTable[iIndex].data.fd;
 				if (iCurFd == -1)
 				{
+					close(iCurFd);
+
+					m_ClientSet.erase(iCurFd);
+
 					continue;
 				}
 
@@ -255,6 +267,20 @@ bool ParallelServer::Start()
 					// Client has been closed at this time
 					if (iRevSize==0)
 					{
+						m_ClientSet.erase(iCurFd);
+
+						m_EpollEvent.data.fd = iCurFd;
+
+						m_EpollEvent.events = EPOLLOUT | EPOLLET;
+
+						int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_DEL, iCurFd, &m_EpollEvent);
+						if (iEpollRegRet == -1)
+						{
+							char* pErrorMsg = strerror(errno);
+
+							SetErrorText(pErrorMsg);
+						}
+
 						std::cout << "Read from client: "
 							<< std::to_string(iCurFd)
 							<< "--"
@@ -271,6 +297,17 @@ bool ParallelServer::Start()
 					<< RevData 
 					<< std::endl;
 
+				std::string strCondition = RevData;
+
+				std::cout << strCondition << std::endl;
+
+				if (strCondition == "Exit")
+				{
+					std::cout << "Exit the loop function now" << std::endl;
+
+					return true;
+				}
+
 				m_EpollEvent.data.fd = iCurFd;
 
 				m_EpollEvent.events = EPOLLOUT | EPOLLET;
@@ -279,6 +316,10 @@ bool ParallelServer::Start()
 				int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_MOD, iCurFd, &m_EpollEvent);
 				if (iEpollRegRet == -1)
 				{
+					close(iCurFd);
+
+					m_ClientSet.erase(iCurFd);
+
 					char* pErrorMsg = strerror(errno);
 
 					SetErrorText(pErrorMsg);
@@ -291,6 +332,10 @@ bool ParallelServer::Start()
 				int iCurFd = m_EventTable[iIndex].data.fd;
 				if (iCurFd == -1)
 				{
+					close(iCurFd);
+
+					m_ClientSet.erase(iCurFd);
+
 					continue;
 				}
 
@@ -302,6 +347,23 @@ bool ParallelServer::Start()
 
 				if (!Send(iCurFd, strSendText.c_str(), static_cast<int>(strSendText.length()+1), iSize))
 				{
+					if (iSize==0)
+					{
+						m_ClientSet.erase(iCurFd);
+
+						m_EpollEvent.data.fd = iCurFd;
+
+						m_EpollEvent.events = EPOLLIN | EPOLLET;
+
+						int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_DEL, iCurFd, &m_EpollEvent);
+						if (iEpollRegRet == -1)
+						{
+							char* pErrorMsg = strerror(errno);
+
+							SetErrorText(pErrorMsg);
+						}
+					}
+
 					continue;
 				}
 	
@@ -313,6 +375,10 @@ bool ParallelServer::Start()
 				int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_MOD, iCurFd, &m_EpollEvent);
 				if (iEpollRegRet == -1)
 				{
+					close(iCurFd);
+
+					m_ClientSet.erase(iCurFd);
+
 					char* pErrorMsg = strerror(errno);
 
 					SetErrorText(pErrorMsg);
@@ -323,16 +389,76 @@ bool ParallelServer::Start()
 		}
 	}
 
-	close(GetListenSocket());
-
-	close(GetEpollfd());
-
 	return false;
+}
+
+// Cleanup
+void ParallelServer::Cleanup()
+{
+	std::cout << "Start to cleanup resources" << std::endl;
+	
+	std::cout << "Client number is:" << m_ClientSet.size() <<std::endl;
+
+	for (std::set<int>::iterator Iter=m_ClientSet.begin();
+		Iter!=m_ClientSet.end();
+		++Iter)
+	{
+		int iCurFd = *Iter;
+
+		m_EpollEvent.data.fd = iCurFd;
+
+		m_EpollEvent.events = EPOLLIN | EPOLLET;
+
+		int iEpollRegRet = epoll_ctl(GetEpollfd(), EPOLL_CTL_DEL, iCurFd, &m_EpollEvent);
+		if (iEpollRegRet == -1)
+		{
+			close(iCurFd);
+
+			char* pErrorMsg = strerror(errno);
+
+			SetErrorText(pErrorMsg);
+		}
+
+		close(iCurFd);
+
+		std::cout << "Close the sock fd: "<<iCurFd << std::endl;
+	}
+
+	m_ClientSet.clear();
+
+	std::set<int>().swap(m_ClientSet);
+
+	std::cout << "Client table size is:" << m_ClientSet.size() << std::endl;
+
+	m_EventTable.clear();
+
+	std::vector<epoll_event>().swap(m_EventTable);
+
+	std::cout << "Finish the cleanup resources" << std::endl;
 }
 
 // Stop the server
 bool ParallelServer::Stop()
 {
+	if (!GetDisposed())
+	{
+		SetDisposed(true);
+
+		Cleanup();
+
+		close(GetEpollfd());
+
+		SetEpollfd(0);
+
+		close(GetListenSocket());
+
+		SetListenSocket(0);
+
+		std::cout << "Close the epoll sock" << std::endl;
+
+		std::cout << "Close the listen sock" << std::endl;
+	}
+
 	return true;
 }
 
