@@ -197,8 +197,10 @@ bool ParallelServer::Start()
 			{
 				close(iCurFd);
 
-				std::cout << "close the client---" 
-					<< std::to_string(iCurFd) 
+				std::cout << "Read from client: "
+					<< std::to_string(iCurFd)
+					<< "--"
+					<< "I am deleted"
 					<< std::endl;
 
 				continue;
@@ -250,6 +252,16 @@ bool ParallelServer::Start()
 
 				if (!Receive(iCurFd, RevData,500, iRevSize))
 				{
+					// Client has been closed at this time
+					if (iRevSize==0)
+					{
+						std::cout << "Read from client: "
+							<< std::to_string(iCurFd)
+							<< "--"
+							<< "I am deleted"
+							<< std::endl;
+					}
+
 					continue;
 				}
 
