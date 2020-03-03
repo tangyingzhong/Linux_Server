@@ -246,14 +246,6 @@ bool ParallelServer::Start()
 
 				if (!Receive(iCurFd, RevData,500, iRevSize))
 				{
-					close(iCurFd);
-
-					continue;
-				}
-
-				// This is an event changed status so read nothing
-				if (iRevSize==0)
-				{
 					continue;
 				}
 
@@ -290,25 +282,10 @@ bool ParallelServer::Start()
 
 				strSendText = strSendText + std::to_string(iCurFd);
 
-				char* pData = const_cast<char*>(strSendText.c_str());
-
-				int iTotalLen = static_cast<int>(strSendText.length());
-
-				int iLeftLen = iTotalLen;
-
-				int iBlockLen = 1024;
-
-				if (iLeftLen < iBlockLen)
-				{
-					iBlockLen = iLeftLen;
-				}
-
 				int iSize = 0;
 
-				if (!Send(iCurFd, pData, iBlockLen, iSize))
+				if (!Send(iCurFd, strSendText.c_str(), static_cast<int>(strSendText.length()+1), iSize))
 				{
-					close(iCurFd);
-
 					continue;
 				}
 	
@@ -385,10 +362,12 @@ bool ParallelServer::Send(int iClientSocket,
 			{
 				lWorkSize = 0;
 
-				continue;
+				break;
 			}
 			else
 			{
+				close(iClientSocket);
+
 				char* pErrorMsg = strerror(errno);
 
 				SetErrorText(pErrorMsg);
@@ -398,7 +377,9 @@ bool ParallelServer::Send(int iClientSocket,
 		}
 		else if (lWrittenSize==0)
 		{
-			break;
+			close(iClientSocket);
+
+			return false;
 		}
 
 		pData += lWrittenSize;
@@ -455,10 +436,12 @@ bool ParallelServer::Receive(int iClientSocket,
 			{
 				lWorkSize = 0;
 
-				continue;
+				break;
 			}
 			else
 			{
+				close(iClientSocket);
+
 				char* pErrorMsg = strerror(errno);
 
 				SetErrorText(pErrorMsg);
@@ -468,7 +451,9 @@ bool ParallelServer::Receive(int iClientSocket,
 		}
 		else if (lReadSize==0)
 		{
-			break;
+			close(iClientSocket);
+
+			return false;
 		}
 
 		lLeftSize -= lReadSize;
