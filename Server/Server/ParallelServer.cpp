@@ -197,6 +197,10 @@ bool ParallelServer::Start()
 			{
 				close(iCurFd);
 
+				std::cout << "close the client---" 
+					<< std::to_string(iCurFd) 
+					<< std::endl;
+
 				continue;
 			}
 
@@ -278,7 +282,7 @@ bool ParallelServer::Start()
 					continue;
 				}
 
-				std::string strSendText = "Server sends text to ";
+				std::string strSendText = "I'm fine today,thanks to ";
 
 				strSendText = strSendText + std::to_string(iCurFd);
 
